@@ -1,0 +1,84 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "hypercube-cascade"
+dynamic = ["version"]
+description = "Python bindings for HypercubeCascade: frozen etalon transit + frozen reservoir orbit + HypercubeCNN on end state"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.21"]
+license = "Apache-2.0"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+
+[project.urls]
+Homepage = "https://github.com/dliptak001/HypercubeCascade"
+Repository = "https://github.com/dliptak001/HypercubeCascade"
+Documentation = "https://github.com/dliptak001/HypercubeCascade/blob/main/docs/Python_SDK.md"
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+wheel.packages = ["hypercube_cascade"]
+
+# Version: edit only hypercube_cascade/_version.py
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "hypercube_cascade/_version.py"
+regex = '''(?x)__version__\s*=\s*["'](?P<value>[^"']+)["']'''
+
+[tool.pytest.ini_options]
+# importlib mode avoids source-dir shadowing the installed _core.pyd.
+# Set via addopts: there is no `import-mode` ini key — it is a CLI-only flag.
+addopts = "--import-mode=importlib"
+
+# ── cibuildwheel ──
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
+# win32 / i686 / musllinux only — do not list pp* unless PyPy is enabled (cibuildwheel v4 warns).
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux*"]
+test-requires = ["pytest>=7.0", "numpy>=1.21"]
+# {project} is the repo checkout root (GHA / cibuildwheel host), not package-dir.
+# package-dir is python/; tests live at python/tests/.
+test-command = "pytest {project}/python/tests -v --tb=short --import-mode=importlib"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+before-all = "yum install -y gcc-toolset-13-gcc-c++"
+environment = { PATH="/opt/rh/gcc-toolset-13/root/usr/bin:$PATH", CC="gcc", CXX="g++", SKBUILD_CMAKE_ARGS="-DHYPERCUBE_ARCH=x86-64-v2" }
+
+[[tool.cibuildwheel.overrides]]
+select = "*-manylinux_aarch64"
+environment = { PATH="/opt/rh/gcc-toolset-13/root/usr/bin:$PATH", CC="gcc", CXX="g++", SKBUILD_CMAKE_ARGS="-DHYPERCUBE_ARCH=none" }
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+environment = { SKBUILD_CMAKE_ARGS="-DHYPERCUBE_ARCH=x86-64-v2", MACOSX_DEPLOYMENT_TARGET="13.0" }
+
+[[tool.cibuildwheel.overrides]]
+select = "*-macosx_arm64"
+environment = { SKBUILD_CMAKE_ARGS="-DHYPERCUBE_ARCH=none", MACOSX_DEPLOYMENT_TARGET="13.0" }
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+environment = { SKBUILD_CMAKE_ARGS="-DHYPERCUBE_ARCH=none" }
